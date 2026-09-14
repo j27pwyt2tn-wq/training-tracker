@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>Training</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <style>
+    :root{
+      --bg:#f6f7f8;
+      --card:#ffffff;
+      --text:#16181d;
+      --muted:#717782;
+      --line:#dde1e6;
+      --accent:#198754;
+      --accent-soft:#e7f5ec;
+      --danger:#c9362b;
+      --shadow:0 1px 2px rgba(0,0,0,.05);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:var(--bg);color:var(--text);
+      padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    }
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:980px;margin:0 auto;padding:14px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;
+    }
+    .title{font-size:22px;font-weight:700;letter-spacing:-.02em}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+    .nav{
+      display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;
+      background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:var(--shadow);
+    }
+    .month-name{text-align:center;font-weight:700}
+    .icon-btn,.small-btn{
+      border:1px solid var(--line);background:var(--card);border-radius:10px;min-height:42px;color:var(--text);
+    }
+    .week-tabs{
+      display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0 12px;
+    }
+    .week-tab{
+      min-height:42px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-weight:600;
+    }
+    .week-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .card{
+      background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+    }
+    .table-wrap{overflow-x:auto;border-radius:14px}
+    table{width:100%;border-collapse:collapse;min-width:650px}
+    th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
+    th{background:#f0f2f4;color:var(--muted);font-weight:600}
+    tbody tr:last-child td{border-bottom:none}
+    td.day,th.day{position:sticky;left:0;z-index:1;background:var(--card)}
+    th.day{background:#f0f2f4;z-index:2}
+    select,input[type=number]{
+      width:100%;min-height:40px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:7px 9px;
+      outline:none;font-size:16px;
+    }
+    select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+    tfoot td{font-weight:700;background:#f8f9fa}
+    .metrics{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px
+    }
+    .metric{
+      background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center
+    }
+    .metric .label{font-size:11px;color:var(--muted)}
+    .metric .value{font-size:18px;font-weight:700;margin-top:2px}
+    .body-card{margin-top:12px;padding:12px}
+    .body-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+    .month-summary{margin-top:12px;padding:12px}
+    .month-summary h3{margin:0 0 10px;font-size:15px}
+    .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+    .summary-box{background:#f8f9fa;border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}
+    .summary-box .k{font-size:10px;color:var(--muted)}
+    .summary-box .v{font-size:15px;font-weight:700;margin-top:2px}
+    .footer-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .small-btn{padding:0 12px;font-size:13px}
+    .small-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .small-btn.danger{color:var(--danger)}
+    .notice{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4}
+    .status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
+    @media (max-width:600px){
+      .app{padding:10px}
+      .title{font-size:20px}
+      .week-tabs{gap:5px}
+      .week-tab{min-height:40px;font-size:13px}
+      .metrics{grid-template-columns:repeat(4,1fr)}
+      .metric{padding:8px 4px}
+      .metric .value{font-size:16px}
+      .summary-grid{grid-template-columns:repeat(3,1fr)}
+      table{min-width:610px}
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="topbar">
+      <div>
+        <div class="title">Training</div>
+        <div class="subtitle">Weekly workouts, monthly progress</div>
+      </div>
+    </div>
+
+    <section class="nav" aria-label="Month navigation">
+      <button id="prevMonth" class="icon-btn" aria-label="Previous month">‹</button>
+      <div class="month-name" id="monthName"></div>
+      <button id="nextMonth" class="icon-btn" aria-label="Next month">›</button>
+    </section>
+
+    <div class="week-tabs" id="weekTabs"></div>
+
+    <section class="card table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="day">Day</th>
+            <th>Exercise</th>
+            <th>Min</th>
+            <th>Km</th>
+            <th>Calories</th>
+          </tr>
+        </thead>
+        <tbody id="weekRows"></tbody>
+        <tfoot>
+          <tr>
+            <td class="day">Total</td>
+            <td><span id="sessionTotal">0</span> sessions</td>
+            <td id="timeTotal">0</td>
+            <td id="kmTotal">0.0</td>
+            <td id="calTotal">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <section class="metrics">
+      <div class="metric"><div class="label">Sessions</div><div class="value" id="summarySessions">0</div></div>
+      <div class="metric"><div class="label">Minutes</div><div class="value" id="summaryTime">0</div></div>
+      <div class="metric"><div class="label">Km</div><div class="value" id="summaryKm">0.0</div></div>
+      <div class="metric"><div class="label">Kcal</div><div class="value" id="summaryCalories">0</div></div>
+    </section>
+
+    <section class="card body-card">
+      <div class="body-grid">
+        <label>
+          <span class="field-label">Friday weight (kg)</span>
+          <input id="weight" type="number" min="30" max="300" step="0.1" inputmode="decimal" placeholder="87.6" />
+        </label>
+        <label>
+          <span class="field-label">Friday waist (cm)</span>
+          <input id="waist" type="number" min="30" max="250" step="0.1" inputmode="decimal" placeholder="98" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card month-summary">
+      <h3>Month summary</h3>
+      <div class="summary-grid">
+        <div class="summary-box"><div class="k">Sessions</div><div class="v" id="monthSessions">0</div></div>
+        <div class="summary-box"><div class="k">Minutes</div><div class="v" id="monthMinutes">0</div></div>
+        <div class="summary-box"><div class="k">Km</div><div class="v" id="monthKm">0.0</div></div>
+        <div class="summary-box"><div class="k">Kcal</div><div class="v" id="monthCalories">0</div></div>
+        <div class="summary-box"><div class="k">Weight Δ</div><div class="v" id="monthWeightDelta">—</div></div>
+      </div>
+    </section>
+
+    <div class="footer-actions">
+      <button id="exportData" class="small-btn primary">Export backup</button>
+      <label class="small-btn" style="display:inline-flex;align-items:center">
+        Import backup
+        <input id="importData" type="file" accept="application/json" hidden>
+      </label>
+      <button id="clearWeek" class="small-btn danger">Clear this week</button>
+    </div>
+
+    <div class="notice">
+      Your entries are stored in this browser on this device. Export a backup occasionally if you want to keep a copy.
+    </div>
+    <div id="status" class="status" aria-live="polite"></div>
+  </main>
+
+  <script>
+  (() => {
+    const STORAGE_KEY = "joao-training-tracker-v1";
+    const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const exercises = ["None","Indoor cycling","Cycling","Walking","Running","Strength training","Swimming","Football","Other"];
+
+    const now = new Date();
+    let currentYear = 2026;
+    let currentMonth = 8; // September, zero-based
+    let currentWeek = 3;  // week 3 selected initially
+
+    const monthName = document.getElementById("monthName");
+    const weekTabs = document.getElementById("weekTabs");
+    const rows = document.getElementById("weekRows");
+    const statusEl = document.getElementById("status");
+
+    function blankDay(){
+      return {exercise:"None", time:"", km:"", calories:""};
+    }
+    function blankWeek(){
+      return {days: Array.from({length:7}, blankDay), weight:"", waist:""};
+    }
+    function defaultData(){
+      return {months:{}};
+    }
+    function loadData(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : defaultData();
+      }catch(e){
+        return defaultData();
+      }
+    }
+    let data = loadData();
+
+    function monthKey(y,m){ return `${y}-${String(m+1).padStart(2,"0")}`; }
+    function ensureMonth(y,m){
+      const key = monthKey(y,m);
+      if(!data.months[key]){
+        data.months[key] = {weeks:[blankWeek(),blankWeek(),blankWeek(),blankWeek(),blankWeek()]};
+      }
+      while(data.months[key].weeks.length < 5) data.months[key].weeks.push(blankWeek());
+      return data.months[key];
+    }
+    function getWeek(){ return ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]; }
+
+    function saveData(msg="Saved"){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      statusEl.textContent = msg;
+      window.clearTimeout(saveData._t);
+      saveData._t = window.setTimeout(()=> statusEl.textContent="", 1400);
+    }
+
+    function fmtMonth(){
+      return new Intl.DateTimeFormat("en-GB",{month:"long",year:"numeric"}).format(new Date(currentYear,currentMonth,1));
+    }
+
+    function renderTabs(){
+      weekTabs.innerHTML="";
+      for(let i=1;i<=5;i++){
+        const b=document.createElement("button");
+        b.type="button";
+        b.className="week-tab"+(i===currentWeek?" active":"");
+        b.textContent="W"+i;
+        b.addEventListener("click",()=>{ currentWeek=i; render(); });
+        weekTabs.appendChild(b);
+      }
+    }
+
+    function numberVal(v){
+      const n=Number(v);
+      return Number.isFinite(n)&&n>=0?n:0;
+    }
+
+    function inputCell(dayIndex, field, step){
+      const td=document.createElement("td");
+      const input=document.createElement("input");
+      input.type="number";
+      input.min="0";
+      input.step=step;
+      input.inputMode="decimal";
+      input.value=getWeek().days[dayIndex][field] ?? "";
+      input.setAttribute("aria-label",`${days[dayIndex]} ${field}`);
+      input.addEventListener("input",()=>{
+        getWeek().days[dayIndex][field]=input.value;
+        saveData();
+        updateTotals();
+        updateMonthSummary();
+      });
+      td.appendChild(input);
+      return td;
+    }
+
+    function renderRows(){
+      rows.innerHTML="";
+      const week=getWeek();
+      days.forEach((day,idx)=>{
+        const tr=document.createElement("tr");
+
+        const d=document.createElement("td");
+        d.className="day";
+        d.textContent=day;
+
+        const exTd=document.createElement("td");
+        const sel=document.createElement("select");
+        sel.setAttribute("aria-label",`${day} exercise`);
+        exercises.forEach(ex=>{
+          const o=document.createElement("option");
+          o.value=ex;o.textContent=ex;
+          if(week.days[idx].exercise===ex) o.selected=true;
+          sel.appendChild(o);
+        });
+        sel.addEventListener("change",()=>{
+          week.days[idx].exercise=sel.value;
+          saveData();
+          updateTotals();
+          updateMonthSummary();
+        });
+        exTd.appendChild(sel);
+
+        tr.append(d,exTd,inputCell(idx,"time","1"),inputCell(idx,"km","0.1"),inputCell(idx,"calories","1"));
+        rows.appendChild(tr);
+      });
+    }
+
+    function updateTotals(){
+      const week=getWeek();
+      let sessions=0,time=0,km=0,cal=0;
+      week.days.forEach(d=>{
+        if(d.exercise && d.exercise!=="None") sessions++;
+        time+=numberVal(d.time);
+        km+=numberVal(d.km);
+        cal+=numberVal(d.calories);
+      });
+      document.getElementById("sessionTotal").textContent=sessions;
+      document.getElementById("timeTotal").textContent=Math.round(time);
+      document.getElementById("kmTotal").textContent=km.toFixed(1);
+      document.getElementById("calTotal").textContent=Math.round(cal);
+      document.getElementById("summarySessions").textContent=sessions;
+      document.getElementById("summaryTime").textContent=Math.round(time);
+      document.getElementById("summaryKm").textContent=km.toFixed(1);
+      document.getElementById("summaryCalories").textContent=Math.round(cal);
+    }
+
+    function updateMonthSummary(){
+      const month=ensureMonth(currentYear,currentMonth);
+      let sessions=0,time=0,km=0,cal=0;
+      const weights=[];
+      month.weeks.forEach(w=>{
+        w.days.forEach(d=>{
+          if(d.exercise && d.exercise!=="None") sessions++;
+          time+=numberVal(d.time);
+          km+=numberVal(d.km);
+          cal+=numberVal(d.calories);
+        });
+        const wt=Number(w.weight);
+        if(Number.isFinite(wt)&&wt>0) weights.push(wt);
+      });
+      document.getElementById("monthSessions").textContent=sessions;
+      document.getElementById("monthMinutes").textContent=Math.round(time);
+      document.getElementById("monthKm").textContent=km.toFixed(1);
+      document.getElementById("monthCalories").textContent=Math.round(cal);
+      const delta=weights.length>=2 ? weights[weights.length-1]-weights[0] : null;
+      document.getElementById("monthWeightDelta").textContent = delta===null ? "—" : `${delta>0?"+":""}${delta.toFixed(1)} kg`;
+    }
+
+    function render(){
+      ensureMonth(currentYear,currentMonth);
+      monthName.textContent=fmtMonth();
+      renderTabs();
+      renderRows();
+      const week=getWeek();
+      document.getElementById("weight").value=week.weight ?? "";
+      document.getElementById("waist").value=week.waist ?? "";
+      updateTotals();
+      updateMonthSummary();
+    }
+
+    document.getElementById("prevMonth").addEventListener("click",()=>{
+      currentMonth--;
+      if(currentMonth<0){currentMonth=11;currentYear--;}
+      currentWeek=1;
+      render();
+    });
+    document.getElementById("nextMonth").addEventListener("click",()=>{
+      currentMonth++;
+      if(currentMonth>11){currentMonth=0;currentYear++;}
+      currentWeek=1;
+      render();
+    });
+
+    document.getElementById("weight").addEventListener("input",(e)=>{
+      getWeek().weight=e.target.value;
+      saveData();
+      updateMonthSummary();
+    });
+    document.getElementById("waist").addEventListener("input",(e)=>{
+      getWeek().waist=e.target.value;
+      saveData();
+    });
+
+    document.getElementById("clearWeek").addEventListener("click",()=>{
+      if(!confirm("Clear all data for this week?")) return;
+      ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]=blankWeek();
+      saveData("Week cleared");
+      render();
+    });
+
+    document.getElementById("exportData").addEventListener("click",()=>{
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;
+      a.download="training-backup.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),500);
+    });
+
+    document.getElementById("importData").addEventListener("change",(e)=>{
+      const file=e.target.files?.[0];
+      if(!file) return;
+      const reader=new FileReader();
+      reader.onload=()=>{
+        try{
+          const parsed=JSON.parse(reader.result);
+          if(!parsed || typeof parsed!=="object" || !parsed.months) throw new Error();
+          data=parsed;
+          saveData("Backup imported");
+          render();
+        }catch(err){
+          statusEl.textContent="Could not import that backup file.";
+        }
+      };
+      reader.readAsText(file);
+      e.target.value="";
+    });
+
+    render();
+  })();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(()=>{});
+    }
+  </script>
+</body>
+</html>
