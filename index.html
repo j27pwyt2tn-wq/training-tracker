@@ -16,6 +16,7 @@
       --accent:#198754;
       --accent-soft:#e7f5ec;
       --danger:#c9362b;
+      --danger-soft:#fdeceb;
       --shadow:0 1px 2px rgba(0,0,0,.05);
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     }
@@ -27,9 +28,7 @@
     button,input,select{font:inherit}
     button{cursor:pointer}
     .app{max-width:980px;margin:0 auto;padding:14px}
-    .topbar{
-      display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;
-    }
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
     .title{font-size:22px;font-weight:700;letter-spacing:-.02em}
     .subtitle{font-size:12px;color:var(--muted);margin-top:2px}
     .nav{
@@ -37,7 +36,7 @@
       background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:var(--shadow);
     }
     .month-name{text-align:center;font-weight:700}
-    .icon-btn,.small-btn{
+    .icon-btn,.small-btn,.ghost-btn{
       border:1px solid var(--line);background:var(--card);border-radius:10px;min-height:42px;color:var(--text);
     }
     .week-tabs{
@@ -47,30 +46,37 @@
       min-height:42px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-weight:600;
     }
     .week-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-    .card{
+    .metrics{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px
+    }
+    .metric{
+      background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;box-shadow:var(--shadow)
+    }
+    .metric .label{font-size:11px;color:var(--muted)}
+    .metric .value{font-size:18px;font-weight:700;margin-top:2px}
+    .day-card,.body-card,.month-summary{
       background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
     }
-    .table-wrap{overflow-x:auto;border-radius:14px}
-    table{width:100%;border-collapse:collapse;min-width:650px}
-    th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
-    th{background:#f0f2f4;color:var(--muted);font-weight:600}
-    tbody tr:last-child td{border-bottom:none}
-    td.day,th.day{position:sticky;left:0;z-index:1;background:var(--card)}
-    th.day{background:#f0f2f4;z-index:2}
+    .day-card{padding:12px;margin-bottom:10px}
+    .day-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+    .day-name{font-weight:700}
+    .day-total{font-size:12px;color:var(--muted)}
+    .sessions{display:grid;gap:8px}
+    .session-row{
+      display:grid;grid-template-columns:1.5fr .9fr .9fr .9fr 42px;gap:8px;
+      padding:8px;border:1px solid var(--line);border-radius:12px;background:#fbfbfc;
+    }
     select,input[type=number]{
       width:100%;min-height:40px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:7px 9px;
       outline:none;font-size:16px;
     }
     select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
-    tfoot td{font-weight:700;background:#f8f9fa}
-    .metrics{
-      display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px
+    .field-wrap .mini{font-size:10px;color:var(--muted);margin-bottom:3px}
+    .remove-btn{
+      min-height:40px;border:1px solid #f2c0bc;border-radius:9px;background:var(--danger-soft);color:var(--danger);font-weight:700
     }
-    .metric{
-      background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center
-    }
-    .metric .label{font-size:11px;color:var(--muted)}
-    .metric .value{font-size:18px;font-weight:700;margin-top:2px}
+    .add-row{margin-top:8px}
+    .ghost-btn{padding:0 12px;font-size:13px;background:#fff}
     .body-card{margin-top:12px;padding:12px}
     .body-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
@@ -86,7 +92,7 @@
     .small-btn.danger{color:var(--danger)}
     .notice{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4}
     .status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
-    @media (max-width:600px){
+    @media (max-width:700px){
       .app{padding:10px}
       .title{font-size:20px}
       .week-tabs{gap:5px}
@@ -95,7 +101,12 @@
       .metric{padding:8px 4px}
       .metric .value{font-size:16px}
       .summary-grid{grid-template-columns:repeat(3,1fr)}
-      table{min-width:610px}
+      .session-row{
+        grid-template-columns:1fr 1fr;
+      }
+      .session-row .remove-btn{
+        grid-column:2;
+      }
     }
   </style>
 </head>
@@ -104,7 +115,7 @@
     <div class="topbar">
       <div>
         <div class="title">Training</div>
-        <div class="subtitle">Weekly workouts, monthly progress</div>
+        <div class="subtitle">Multiple exercises per day</div>
       </div>
     </div>
 
@@ -116,30 +127,6 @@
 
     <div class="week-tabs" id="weekTabs"></div>
 
-    <section class="card table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="day">Day</th>
-            <th>Exercise</th>
-            <th>Min</th>
-            <th>Km</th>
-            <th>Calories</th>
-          </tr>
-        </thead>
-        <tbody id="weekRows"></tbody>
-        <tfoot>
-          <tr>
-            <td class="day">Total</td>
-            <td><span id="sessionTotal">0</span> sessions</td>
-            <td id="timeTotal">0</td>
-            <td id="kmTotal">0.0</td>
-            <td id="calTotal">0</td>
-          </tr>
-        </tfoot>
-      </table>
-    </section>
-
     <section class="metrics">
       <div class="metric"><div class="label">Sessions</div><div class="value" id="summarySessions">0</div></div>
       <div class="metric"><div class="label">Minutes</div><div class="value" id="summaryTime">0</div></div>
@@ -147,7 +134,9 @@
       <div class="metric"><div class="label">Kcal</div><div class="value" id="summaryCalories">0</div></div>
     </section>
 
-    <section class="card body-card">
+    <section id="daysContainer"></section>
+
+    <section class="body-card">
       <div class="body-grid">
         <label>
           <span class="field-label">Friday weight (kg)</span>
@@ -160,7 +149,7 @@
       </div>
     </section>
 
-    <section class="card month-summary">
+    <section class="month-summary">
       <h3>Month summary</h3>
       <div class="summary-grid">
         <div class="summary-box"><div class="k">Sessions</div><div class="v" id="monthSessions">0</div></div>
@@ -188,22 +177,24 @@
 
   <script>
   (() => {
-    const STORAGE_KEY = "joao-training-tracker-v1";
+    const STORAGE_KEY = "joao-training-tracker-v2";
     const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-    const exercises = ["None","Indoor cycling","Cycling","Walking","Running","Strength training","Swimming","Football","Other"];
+    const exercises = ["Indoor cycling","Outdoor cycling","Walking","Running","Strength training","Swimming","Football","Other"];
 
-    const now = new Date();
     let currentYear = 2026;
-    let currentMonth = 8; // September, zero-based
-    let currentWeek = 3;  // week 3 selected initially
+    let currentMonth = 8;
+    let currentWeek = 3;
 
     const monthName = document.getElementById("monthName");
     const weekTabs = document.getElementById("weekTabs");
-    const rows = document.getElementById("weekRows");
+    const daysContainer = document.getElementById("daysContainer");
     const statusEl = document.getElementById("status");
 
+    function blankSession(){
+      return {exercise:"Indoor cycling", time:"", km:"", calories:""};
+    }
     function blankDay(){
-      return {exercise:"None", time:"", km:"", calories:""};
+      return {sessions:[]};
     }
     function blankWeek(){
       return {days: Array.from({length:7}, blankDay), weight:"", waist:""};
@@ -228,6 +219,12 @@
         data.months[key] = {weeks:[blankWeek(),blankWeek(),blankWeek(),blankWeek(),blankWeek()]};
       }
       while(data.months[key].weeks.length < 5) data.months[key].weeks.push(blankWeek());
+      data.months[key].weeks.forEach(w => {
+        while(w.days.length < 7) w.days.push(blankDay());
+        w.days.forEach(d => {
+          if(!Array.isArray(d.sessions)) d.sessions = [];
+        });
+      });
       return data.months[key];
     }
     function getWeek(){ return ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]; }
@@ -260,74 +257,169 @@
       return Number.isFinite(n)&&n>=0?n:0;
     }
 
-    function inputCell(dayIndex, field, step){
-      const td=document.createElement("td");
-      const input=document.createElement("input");
-      input.type="number";
-      input.min="0";
-      input.step=step;
-      input.inputMode="decimal";
-      input.value=getWeek().days[dayIndex][field] ?? "";
-      input.setAttribute("aria-label",`${days[dayIndex]} ${field}`);
-      input.addEventListener("input",()=>{
-        getWeek().days[dayIndex][field]=input.value;
-        saveData();
-        updateTotals();
-        updateMonthSummary();
+    function dayTotals(day){
+      let sessions=0,time=0,km=0,cal=0;
+      day.sessions.forEach(s=>{
+        const hasSomething = (s.exercise && s.exercise.trim()) || s.time || s.km || s.calories;
+        if(hasSomething) sessions++;
+        time += numberVal(s.time);
+        km += numberVal(s.km);
+        cal += numberVal(s.calories);
       });
-      td.appendChild(input);
-      return td;
+      return {sessions,time,km,cal};
     }
 
-    function renderRows(){
-      rows.innerHTML="";
+    function createField(label, el){
+      const wrap = document.createElement("div");
+      wrap.className = "field-wrap";
+      const mini = document.createElement("div");
+      mini.className = "mini";
+      mini.textContent = label;
+      wrap.appendChild(mini);
+      wrap.appendChild(el);
+      return wrap;
+    }
+
+    function renderDays(){
+      daysContainer.innerHTML="";
       const week=getWeek();
-      days.forEach((day,idx)=>{
-        const tr=document.createElement("tr");
 
-        const d=document.createElement("td");
-        d.className="day";
-        d.textContent=day;
+      week.days.forEach((day, dayIndex)=>{
+        const card=document.createElement("section");
+        card.className="day-card";
 
-        const exTd=document.createElement("td");
-        const sel=document.createElement("select");
-        sel.setAttribute("aria-label",`${day} exercise`);
-        exercises.forEach(ex=>{
-          const o=document.createElement("option");
-          o.value=ex;o.textContent=ex;
-          if(week.days[idx].exercise===ex) o.selected=true;
-          sel.appendChild(o);
+        const head=document.createElement("div");
+        head.className="day-head";
+
+        const left=document.createElement("div");
+        const name=document.createElement("div");
+        name.className="day-name";
+        name.textContent=days[dayIndex];
+        const total=document.createElement("div");
+        total.className="day-total";
+        const t=dayTotals(day);
+        total.textContent = `${t.sessions} session${t.sessions===1?"":"s"} · ${Math.round(t.time)} min · ${t.km.toFixed(1)} km · ${Math.round(t.cal)} kcal`;
+        left.append(name,total);
+
+        const addBtn=document.createElement("button");
+        addBtn.type="button";
+        addBtn.className="ghost-btn";
+        addBtn.textContent="+ Add exercise";
+        addBtn.addEventListener("click",()=>{
+          day.sessions.push(blankSession());
+          saveData("Exercise added");
+          render();
         });
-        sel.addEventListener("change",()=>{
-          week.days[idx].exercise=sel.value;
-          saveData();
-          updateTotals();
-          updateMonthSummary();
-        });
-        exTd.appendChild(sel);
 
-        tr.append(d,exTd,inputCell(idx,"time","1"),inputCell(idx,"km","0.1"),inputCell(idx,"calories","1"));
-        rows.appendChild(tr);
+        head.append(left,addBtn);
+
+        const sessions=document.createElement("div");
+        sessions.className="sessions";
+
+        if(day.sessions.length===0){
+          const empty=document.createElement("div");
+          empty.className="day-total";
+          empty.textContent="No exercises yet.";
+          sessions.appendChild(empty);
+        } else {
+          day.sessions.forEach((session, sessionIndex)=>{
+            const row=document.createElement("div");
+            row.className="session-row";
+
+            const sel=document.createElement("select");
+            exercises.forEach(ex=>{
+              const o=document.createElement("option");
+              o.value=ex;
+              o.textContent=ex;
+              if(session.exercise===ex) o.selected=true;
+              sel.appendChild(o);
+            });
+            sel.addEventListener("change",()=>{
+              day.sessions[sessionIndex].exercise=sel.value;
+              saveData();
+              updateSummaries();
+              renderDaysOnlyTotals();
+            });
+
+            const time=document.createElement("input");
+            time.type="number"; time.min="0"; time.step="1"; time.inputMode="decimal"; time.value=session.time ?? "";
+            time.addEventListener("input",()=>{
+              day.sessions[sessionIndex].time=time.value;
+              saveData();
+              updateSummaries();
+              renderDaysOnlyTotals();
+            });
+
+            const km=document.createElement("input");
+            km.type="number"; km.min="0"; km.step="0.1"; km.inputMode="decimal"; km.value=session.km ?? "";
+            km.addEventListener("input",()=>{
+              day.sessions[sessionIndex].km=km.value;
+              saveData();
+              updateSummaries();
+              renderDaysOnlyTotals();
+            });
+
+            const cal=document.createElement("input");
+            cal.type="number"; cal.min="0"; cal.step="1"; cal.inputMode="decimal"; cal.value=session.calories ?? "";
+            cal.addEventListener("input",()=>{
+              day.sessions[sessionIndex].calories=cal.value;
+              saveData();
+              updateSummaries();
+              renderDaysOnlyTotals();
+            });
+
+            const remove=document.createElement("button");
+            remove.type="button";
+            remove.className="remove-btn";
+            remove.textContent="×";
+            remove.setAttribute("aria-label","Remove exercise");
+            remove.addEventListener("click",()=>{
+              day.sessions.splice(sessionIndex,1);
+              saveData("Exercise removed");
+              render();
+            });
+
+            row.appendChild(createField("Exercise", sel));
+            row.appendChild(createField("Min", time));
+            row.appendChild(createField("Km", km));
+            row.appendChild(createField("Calories", cal));
+            row.appendChild(remove);
+            sessions.appendChild(row);
+          });
+        }
+
+        card.append(head, sessions);
+        daysContainer.appendChild(card);
       });
     }
 
-    function updateTotals(){
+    function renderDaysOnlyTotals(){
+      const cards = daysContainer.querySelectorAll(".day-card");
+      const week = getWeek();
+      cards.forEach((card, i) => {
+        const totalEl = card.querySelector(".day-total");
+        const t = dayTotals(week.days[i]);
+        totalEl.textContent = `${t.sessions} session${t.sessions===1?"":"s"} · ${Math.round(t.time)} min · ${t.km.toFixed(1)} km · ${Math.round(t.cal)} kcal`;
+      });
+    }
+
+    function updateSummaries(){
       const week=getWeek();
       let sessions=0,time=0,km=0,cal=0;
-      week.days.forEach(d=>{
-        if(d.exercise && d.exercise!=="None") sessions++;
-        time+=numberVal(d.time);
-        km+=numberVal(d.km);
-        cal+=numberVal(d.calories);
+      week.days.forEach(day=>{
+        day.sessions.forEach(s=>{
+          const hasSomething = (s.exercise && s.exercise.trim()) || s.time || s.km || s.calories;
+          if(hasSomething) sessions++;
+          time += numberVal(s.time);
+          km += numberVal(s.km);
+          cal += numberVal(s.calories);
+        });
       });
-      document.getElementById("sessionTotal").textContent=sessions;
-      document.getElementById("timeTotal").textContent=Math.round(time);
-      document.getElementById("kmTotal").textContent=km.toFixed(1);
-      document.getElementById("calTotal").textContent=Math.round(cal);
       document.getElementById("summarySessions").textContent=sessions;
       document.getElementById("summaryTime").textContent=Math.round(time);
       document.getElementById("summaryKm").textContent=km.toFixed(1);
       document.getElementById("summaryCalories").textContent=Math.round(cal);
+      updateMonthSummary();
     }
 
     function updateMonthSummary(){
@@ -335,11 +427,14 @@
       let sessions=0,time=0,km=0,cal=0;
       const weights=[];
       month.weeks.forEach(w=>{
-        w.days.forEach(d=>{
-          if(d.exercise && d.exercise!=="None") sessions++;
-          time+=numberVal(d.time);
-          km+=numberVal(d.km);
-          cal+=numberVal(d.calories);
+        w.days.forEach(day=>{
+          day.sessions.forEach(s=>{
+            const hasSomething = (s.exercise && s.exercise.trim()) || s.time || s.km || s.calories;
+            if(hasSomething) sessions++;
+            time+=numberVal(s.time);
+            km+=numberVal(s.km);
+            cal+=numberVal(s.calories);
+          });
         });
         const wt=Number(w.weight);
         if(Number.isFinite(wt)&&wt>0) weights.push(wt);
@@ -356,12 +451,11 @@
       ensureMonth(currentYear,currentMonth);
       monthName.textContent=fmtMonth();
       renderTabs();
-      renderRows();
+      renderDays();
       const week=getWeek();
       document.getElementById("weight").value=week.weight ?? "";
       document.getElementById("waist").value=week.waist ?? "";
-      updateTotals();
-      updateMonthSummary();
+      updateSummaries();
     }
 
     document.getElementById("prevMonth").addEventListener("click",()=>{
@@ -425,13 +519,12 @@
       e.target.value="";
     });
 
-    render();
-  })();
-  </script>
-  <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js").catch(()=>{});
     }
+
+    render();
+  })();
   </script>
 </body>
 </html>
