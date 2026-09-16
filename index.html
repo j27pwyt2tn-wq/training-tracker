@@ -93,16 +93,26 @@
     .notice{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4}
     .status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
 
-    .main-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;background:#e9ecef;padding:4px;border-radius:12px}
-    .main-tab{min-height:42px;border:0;border-radius:9px;background:transparent;font-weight:700;color:var(--muted)}
+    .main-tabs{
+      display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;
+      background:#e9ecef;padding:4px;border-radius:12px
+    }
+    .main-tab{
+      min-height:42px;border:0;border-radius:9px;background:transparent;
+      font-weight:700;color:var(--muted)
+    }
     .main-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
     .hidden{display:none!important}
-    .food-plan-day{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden}
-    .food-plan-day h3{margin:0;padding:11px 12px;background:#f0f2f4;font-size:15px}
-    .food-plan-row{display:grid;grid-template-columns:115px 1fr;border-top:1px solid var(--line)}
-    .food-plan-meal{padding:10px 12px;font-size:13px;font-weight:700;color:var(--muted)}
-    .food-plan-text{padding:10px 12px;font-size:13px;line-height:1.45}
-    .food-help{font-size:12px;color:var(--muted);line-height:1.45}
+    .food-intro{font-size:12px;color:var(--muted);line-height:1.45;margin-bottom:12px}
+    .food-day{
+      background:var(--card);border:1px solid var(--line);border-radius:14px;
+      box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden
+    }
+    .food-day h3{margin:0;padding:11px 12px;background:#f0f2f4;font-size:15px}
+    .food-row{display:grid;grid-template-columns:120px 1fr;border-top:1px solid var(--line)}
+    .food-meal{padding:10px 12px;font-size:13px;font-weight:700;color:var(--muted)}
+    .food-text{padding:10px 12px;font-size:13px;line-height:1.45}
+
     @media (max-width:700px){
       .app{padding:10px}
       .title{font-size:20px}
@@ -118,8 +128,9 @@
       .session-row .remove-btn{
         grid-column:2;
       }
-      .meal{grid-template-columns:1fr 42px}
-      .meal-name{grid-column:1 / -1;padding-top:0}
+      .food-row{grid-template-columns:1fr}
+      .food-meal{padding-bottom:2px}
+      .food-text{padding-top:3px}
     }
   </style>
 </head>
@@ -132,19 +143,20 @@
       </div>
     </div>
 
-
     <div class="main-tabs">
       <button id="trainingTab" class="main-tab active" type="button">Training</button>
       <button id="foodTab" class="main-tab" type="button">Food</button>
     </div>
 
-    <div id="trainingNav"><section class="nav" aria-label="Month navigation">
-      <button id="prevMonth" class="icon-btn" aria-label="Previous month">‹</button>
-      <div class="month-name" id="monthName"></div>
-      <button id="nextMonth" class="icon-btn" aria-label="Next month">›</button>
-    </section>
+    <div id="trainingNav">
+      <section class="nav" aria-label="Month navigation">
+        <button id="prevMonth" class="icon-btn" aria-label="Previous month">‹</button>
+        <div class="month-name" id="monthName"></div>
+        <button id="nextMonth" class="icon-btn" aria-label="Next month">›</button>
+      </section>
 
-    <div class="week-tabs" id="weekTabs"></div></div>
+      <div class="week-tabs" id="weekTabs"></div>
+    </div>
 
     <section id="trainingPage">
     <section class="metrics">
@@ -179,14 +191,14 @@
         <div class="summary-box"><div class="k">Weight Δ</div><div class="v" id="monthWeightDelta">—</div></div>
       </div>
     </section>
+
     </section>
 
-
     <section id="foodPage" class="hidden">
-      <div class="food-help" style="margin:0 0 12px">
-        Weekly meal plan reference. This page is only for checking portions and ingredients; nothing here is logged or saved by week.
+      <div class="food-intro">
+        Plano alimentar semanal de referência. Aqui não há registo por semana nem checkboxes; serve apenas para consultar rapidamente ingredientes e quantidades.
       </div>
-      <section id="foodReference"></section>
+      <div id="foodReference"></div>
     </section>
 
     <div class="footer-actions">
@@ -208,8 +220,9 @@
   (() => {
     const STORAGE_KEY = "joao-training-tracker-v2";
     const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-    const dayNames = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
     const exercises = ["Indoor cycling","Outdoor cycling","Walking","Running","Strength training","Swimming","Football","Other"];
+
+    const foodDays = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
     const mealNames = ["Pequeno-almoço","Almoço","Lanche","Jantar"];
     const mealPlan = [
       [
@@ -255,8 +268,8 @@
         "Peixe/frango 180 g + arroz 60 g cru + feijão cozido 100 g + cenoura crua 100 g + tomate 100 g + azeite 10 g"
       ]
     ];
-
     let activePage = "training";
+
     let currentYear = 2026;
     let currentMonth = 8;
     let currentWeek = 3;
@@ -264,7 +277,6 @@
     const monthName = document.getElementById("monthName");
     const weekTabs = document.getElementById("weekTabs");
     const daysContainer = document.getElementById("daysContainer");
-    const foodContainer = document.getElementById("foodContainer");
     const statusEl = document.getElementById("status");
 
     function blankSession(){
@@ -297,12 +309,37 @@
       }
       while(data.months[key].weeks.length < 5) data.months[key].weeks.push(blankWeek());
       data.months[key].weeks.forEach(w => {
-        if(!Array.isArray(w.days)) w.days = Array.from({length:7}, blankDay);
         while(w.days.length < 7) w.days.push(blankDay());
-        w.days.forEach(d => { if(!Array.isArray(d.sessions)) d.sessions = []; });
-        if(typeof w.weight === "undefined") w.weight = "";
-        if(typeof w.waist === "undefined") w.waist = "";
+        w.days.forEach(d => {
+          if(!Array.isArray(d.sessions)) d.sessions = [];
+        });
+      });
+      return data.months[key];
+    }
+    function getWeek(){ return ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]; }
+
+    function saveData(msg="Saved"){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      statusEl.textContent = msg;
+      window.clearTimeout(saveData._t);
+      saveData._t = window.setTimeout(()=> statusEl.textContent="", 1400);
+    }
+
+    function fmtMonth(){
+      return new Intl.DateTimeFormat("en-GB",{month:"long",year:"numeric"}).format(new Date(currentYear,currentMonth,1));
+    }
+
+    function renderTabs(){
+      weekTabs.innerHTML="";
+      for(let i=1;i<=5;i++){
+        const b=document.createElement("button");
+        b.type="button";
+        b.className="week-tab"+(i===currentWeek?" active":"");
+        b.textContent="W"+i;
+        b.addEventListener("click",()=>{ currentWeek=i; render(); });
+        weekTabs.appendChild(b);
       }
+    }
 
     function numberVal(v){
       const n=Number(v);
@@ -455,37 +492,6 @@
       });
     }
 
-    function renderFoodReference(){
-      const target = document.getElementById("foodReference");
-      target.innerHTML="";
-      dayNames.forEach((dayName, dayIndex)=>{
-        const day = document.createElement("section");
-        day.className="food-plan-day";
-
-        const h=document.createElement("h3");
-        h.textContent=dayName;
-        day.appendChild(h);
-
-        mealPlan[dayIndex].forEach((text, mealIndex)=>{
-          const row=document.createElement("div");
-          row.className="food-plan-row";
-
-          const meal=document.createElement("div");
-          meal.className="food-plan-meal";
-          meal.textContent=mealNames[mealIndex];
-
-          const body=document.createElement("div");
-          body.className="food-plan-text";
-          body.textContent=text;
-
-          row.append(meal,body);
-          day.appendChild(row);
-        });
-
-        target.appendChild(day);
-      });
-    }
-
     function updateSummaries(){
       const week=getWeek();
       let sessions=0,time=0,km=0,cal=0;
@@ -530,16 +536,58 @@
       document.getElementById("monthWeightDelta").textContent = delta===null ? "—" : `${delta>0?"+":""}${delta.toFixed(1)} kg`;
     }
 
+
+    function renderFoodReference(){
+      const target = document.getElementById("foodReference");
+      target.innerHTML = "";
+      foodDays.forEach((dayName, dayIndex) => {
+        const day = document.createElement("section");
+        day.className = "food-day";
+
+        const heading = document.createElement("h3");
+        heading.textContent = dayName;
+        day.appendChild(heading);
+
+        mealPlan[dayIndex].forEach((text, mealIndex) => {
+          const row = document.createElement("div");
+          row.className = "food-row";
+
+          const meal = document.createElement("div");
+          meal.className = "food-meal";
+          meal.textContent = mealNames[mealIndex];
+
+          const body = document.createElement("div");
+          body.className = "food-text";
+          body.textContent = text;
+
+          row.append(meal, body);
+          day.appendChild(row);
+        });
+
+        target.appendChild(day);
+      });
+    }
+
+    function setPage(page){
+      activePage = page;
+      const training = page === "training";
+      document.getElementById("trainingPage").classList.toggle("hidden", !training);
+      document.getElementById("foodPage").classList.toggle("hidden", training);
+      document.getElementById("trainingNav").classList.toggle("hidden", !training);
+      document.getElementById("trainingTab").classList.toggle("active", training);
+      document.getElementById("foodTab").classList.toggle("active", !training);
+    }
+
     function render(){
       ensureMonth(currentYear,currentMonth);
       monthName.textContent=fmtMonth();
       renderTabs();
       renderDays();
-      renderFoodReference();
       const week=getWeek();
       document.getElementById("weight").value=week.weight ?? "";
       document.getElementById("waist").value=week.waist ?? "";
       updateSummaries();
+      renderFoodReference();
       setPage(activePage);
     }
 
@@ -581,7 +629,7 @@
       const url=URL.createObjectURL(blob);
       const a=document.createElement("a");
       a.href=url;
-      a.download="health-tracker-backup.json";
+      a.download="training-backup.json";
       document.body.appendChild(a);
       a.click();
       a.remove();
