@@ -97,17 +97,12 @@
     .main-tab{min-height:42px;border:0;border-radius:9px;background:transparent;font-weight:700;color:var(--muted)}
     .main-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
     .hidden{display:none!important}
-    .food-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-    .food-card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-bottom:10px}
-    .food-day-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .food-meals{display:grid;gap:8px}
-    .meal{display:grid;grid-template-columns:110px 1fr 42px;gap:8px;align-items:start;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fbfbfc}
-    .meal.done{background:var(--accent-soft)}
-    .meal-name{font-weight:600;font-size:13px;padding-top:10px}
-    .meal textarea{width:100%;min-height:68px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:7px 9px;outline:none;font-size:16px;resize:vertical;line-height:1.35}
-    .meal textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
-    .meal-check{width:24px;height:24px;margin:8px auto 0;accent-color:var(--accent)}
-    .food-help{font-size:11px;color:var(--muted);margin:-2px 0 10px}
+    .food-plan-day{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden}
+    .food-plan-day h3{margin:0;padding:11px 12px;background:#f0f2f4;font-size:15px}
+    .food-plan-row{display:grid;grid-template-columns:115px 1fr;border-top:1px solid var(--line)}
+    .food-plan-meal{padding:10px 12px;font-size:13px;font-weight:700;color:var(--muted)}
+    .food-plan-text{padding:10px 12px;font-size:13px;line-height:1.45}
+    .food-help{font-size:12px;color:var(--muted);line-height:1.45}
     @media (max-width:700px){
       .app{padding:10px}
       .title{font-size:20px}
@@ -143,13 +138,13 @@
       <button id="foodTab" class="main-tab" type="button">Food</button>
     </div>
 
-    <section class="nav" aria-label="Month navigation">
+    <div id="trainingNav"><section class="nav" aria-label="Month navigation">
       <button id="prevMonth" class="icon-btn" aria-label="Previous month">‹</button>
       <div class="month-name" id="monthName"></div>
       <button id="nextMonth" class="icon-btn" aria-label="Next month">›</button>
     </section>
 
-    <div class="week-tabs" id="weekTabs"></div>
+    <div class="week-tabs" id="weekTabs"></div></div>
 
     <section id="trainingPage">
     <section class="metrics">
@@ -186,14 +181,12 @@
     </section>
     </section>
 
+
     <section id="foodPage" class="hidden">
-      <section class="food-summary">
-        <div class="metric"><div class="label">Meals followed</div><div class="value" id="foodDone">0</div></div>
-        <div class="metric"><div class="label">Planned meals</div><div class="value" id="foodPlanned">28</div></div>
-        <div class="metric"><div class="label">Completion</div><div class="value" id="foodPercent">0%</div></div>
-      </section>
-      <div class="food-help">Tick each meal when you follow the plan. You can edit the meal text for that specific week.</div>
-      <section id="foodContainer"></section>
+      <div class="food-help" style="margin:0 0 12px">
+        Weekly meal plan reference. This page is only for checking portions and ingredients; nothing here is logged or saved by week.
+      </div>
+      <section id="foodReference"></section>
     </section>
 
     <div class="footer-actions">
@@ -280,11 +273,8 @@
     function blankDay(){
       return {sessions:[]};
     }
-    function blankFood(){
-      return mealPlan.map(day => day.map(text => ({text, done:false})));
-    }
     function blankWeek(){
-      return {days: Array.from({length:7}, blankDay), weight:"", waist:"", food:blankFood()};
+      return {days: Array.from({length:7}, blankDay), weight:"", waist:""};
     }
     function defaultData(){
       return {months:{}};
@@ -312,43 +302,7 @@
         w.days.forEach(d => { if(!Array.isArray(d.sessions)) d.sessions = []; });
         if(typeof w.weight === "undefined") w.weight = "";
         if(typeof w.waist === "undefined") w.waist = "";
-        if(!Array.isArray(w.food)) w.food = blankFood();
-        while(w.food.length < 7) w.food.push([]);
-        for(let di=0; di<7; di++){
-          if(!Array.isArray(w.food[di])) w.food[di] = [];
-          for(let mi=0; mi<4; mi++){
-            if(!w.food[di][mi]) w.food[di][mi] = {text:mealPlan[di][mi], done:false};
-            if(typeof w.food[di][mi].text !== "string") w.food[di][mi].text = mealPlan[di][mi];
-            if(typeof w.food[di][mi].done !== "boolean") w.food[di][mi].done = false;
-          }
-        }
-      });
-      return data.months[key];
-    }
-    function getWeek(){ return ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]; }
-
-    function saveData(msg="Saved"){
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      statusEl.textContent = msg;
-      window.clearTimeout(saveData._t);
-      saveData._t = window.setTimeout(()=> statusEl.textContent="", 1400);
-    }
-
-    function fmtMonth(){
-      return new Intl.DateTimeFormat("en-GB",{month:"long",year:"numeric"}).format(new Date(currentYear,currentMonth,1));
-    }
-
-    function renderTabs(){
-      weekTabs.innerHTML="";
-      for(let i=1;i<=5;i++){
-        const b=document.createElement("button");
-        b.type="button";
-        b.className="week-tab"+(i===currentWeek?" active":"");
-        b.textContent="W"+i;
-        b.addEventListener("click",()=>{ currentWeek=i; render(); });
-        weekTabs.appendChild(b);
       }
-    }
 
     function numberVal(v){
       const n=Number(v);
@@ -501,72 +455,35 @@
       });
     }
 
-    function renderFood(){
-      const week=getWeek();
-      foodContainer.innerHTML="";
-      week.food.forEach((meals, dayIndex)=>{
-        const card=document.createElement("section");
-        card.className="food-card";
-        const head=document.createElement("div");
-        head.className="food-day-title";
-        const title=document.createElement("div");
-        title.className="day-name";
-        title.textContent=dayNames[dayIndex];
-        const count=document.createElement("div");
-        count.className="day-total";
-        count.textContent=`${meals.filter(m=>m.done).length}/4 cumpridas`;
-        head.append(title,count);
-        const list=document.createElement("div");
-        list.className="food-meals";
-        meals.forEach((meal, mealIndex)=>{
+    function renderFoodReference(){
+      const target = document.getElementById("foodReference");
+      target.innerHTML="";
+      dayNames.forEach((dayName, dayIndex)=>{
+        const day = document.createElement("section");
+        day.className="food-plan-day";
+
+        const h=document.createElement("h3");
+        h.textContent=dayName;
+        day.appendChild(h);
+
+        mealPlan[dayIndex].forEach((text, mealIndex)=>{
           const row=document.createElement("div");
-          row.className="meal"+(meal.done?" done":"");
-          const name=document.createElement("div");
-          name.className="meal-name";
-          name.textContent=mealNames[mealIndex];
-          const text=document.createElement("textarea");
-          text.value=meal.text;
-          text.setAttribute("aria-label",`${dayNames[dayIndex]} ${mealNames[mealIndex]}`);
-          text.addEventListener("input",()=>{ week.food[dayIndex][mealIndex].text=text.value; saveData(); });
-          const check=document.createElement("input");
-          check.type="checkbox";
-          check.className="meal-check";
-          check.checked=meal.done;
-          check.setAttribute("aria-label",`Marcar ${dayNames[dayIndex]} ${mealNames[mealIndex]} como cumprida`);
-          check.addEventListener("change",()=>{
-            week.food[dayIndex][mealIndex].done=check.checked;
-            saveData();
-            renderFood();
-          });
-          row.append(name,text,check);
-          list.appendChild(row);
+          row.className="food-plan-row";
+
+          const meal=document.createElement("div");
+          meal.className="food-plan-meal";
+          meal.textContent=mealNames[mealIndex];
+
+          const body=document.createElement("div");
+          body.className="food-plan-text";
+          body.textContent=text;
+
+          row.append(meal,body);
+          day.appendChild(row);
         });
-        card.append(head,list);
-        foodContainer.appendChild(card);
+
+        target.appendChild(day);
       });
-      updateFoodSummary();
-    }
-
-    function updateFoodSummary(){
-      const week=getWeek();
-      let done=0, planned=0;
-      week.food.forEach(day=>day.forEach(meal=>{
-        if(meal.text.trim()) planned++;
-        if(meal.done) done++;
-      }));
-      document.getElementById("foodDone").textContent=done;
-      document.getElementById("foodPlanned").textContent=planned;
-      document.getElementById("foodPercent").textContent=planned ? Math.round(done/planned*100)+"%" : "0%";
-    }
-
-    function setPage(page){
-      activePage=page;
-      const training=page==="training";
-      document.getElementById("trainingPage").classList.toggle("hidden",!training);
-      document.getElementById("foodPage").classList.toggle("hidden",training);
-      document.getElementById("trainingTab").classList.toggle("active",training);
-      document.getElementById("foodTab").classList.toggle("active",!training);
-      if(!training) renderFood();
     }
 
     function updateSummaries(){
@@ -618,7 +535,7 @@
       monthName.textContent=fmtMonth();
       renderTabs();
       renderDays();
-      renderFood();
+      renderFoodReference();
       const week=getWeek();
       document.getElementById("weight").value=week.weight ?? "";
       document.getElementById("waist").value=week.waist ?? "";
@@ -653,7 +570,7 @@
     });
 
     document.getElementById("clearWeek").addEventListener("click",()=>{
-      if(!confirm("Clear all training and food tracking for this week?")) return;
+      if(!confirm("Clear all training data for this week?")) return;
       ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]=blankWeek();
       saveData("Week cleared");
       render();
