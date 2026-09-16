@@ -113,6 +113,17 @@
     .food-meal{padding:10px 12px;font-size:13px;font-weight:700;color:var(--muted)}
     .food-text{padding:10px 12px;font-size:13px;line-height:1.45}
 
+
+    .food-guide-card{
+      background:var(--card);border:1px solid var(--line);border-radius:14px;
+      box-shadow:var(--shadow);padding:14px;margin-bottom:10px
+    }
+    .food-guide-card h3{margin:0 0 10px;font-size:16px}
+    .food-guide-text,.food-guide-list{font-size:14px;line-height:1.5}
+    .food-guide-list{display:grid;gap:7px}
+    .food-guide-list strong{font-weight:700}
+    .food-guide-list .or{color:var(--muted);font-weight:600}
+
     @media (max-width:700px){
       .app{padding:10px}
       .title{font-size:20px}
@@ -194,11 +205,57 @@
 
     </section>
 
+
     <section id="foodPage" class="hidden">
       <div class="food-intro">
-        Plano alimentar semanal de referência. Aqui não há registo por semana nem checkboxes; serve apenas para consultar rapidamente ingredientes e quantidades.
+        Guia alimentar de referência. Sem registo diário, sem checkboxes e sem ligação às semanas.
       </div>
-      <div id="foodReference"></div>
+
+      <section class="food-guide-card">
+        <h3>Pequeno-almoço</h3>
+        <div class="food-guide-text">
+          2 Weetabix + 1 pêra Rocha + mel 5 g + descafeinado sem açúcar
+        </div>
+      </section>
+
+      <section class="food-guide-card">
+        <h3>Almoço</h3>
+        <div class="food-guide-list">
+          <div><strong>Alface:</strong> 200 g</div>
+          <div><strong>Proteína:</strong> 2 ovos <span class="or">ou</span> 120–150 g de frango, atum, peixe, etc.</div>
+          <div><strong>Pão integral:</strong> 50 g</div>
+          <div><strong>Queijo fresco:</strong> 60 g</div>
+          <div><strong>Nozes:</strong> 2 unid. (~10 g)</div>
+          <div><strong>Azeite:</strong> 10 g</div>
+        </div>
+      </section>
+
+      <section class="food-guide-card">
+        <h3>Lanche</h3>
+        <div class="food-guide-list">
+          <div>1 iogurte Milbona Linea 0%</div>
+          <div>+ 1 peça de fruta, se houver fome</div>
+        </div>
+      </section>
+
+      <section class="food-guide-card">
+        <h3>Jantar</h3>
+        <div class="food-guide-list">
+          <div><strong>Proteína:</strong> 180–200 g de frango, peru, peixe, polvo, etc.</div>
+          <div><strong>Batata, feijão ou grão:</strong> 180–200 g cozidos</div>
+          <div><strong>ou arroz/massa:</strong> 70–80 g em cru</div>
+          <div><strong>Legumes:</strong> 200 g de cenoura crua, tomate, alface, etc.</div>
+          <div><strong>Azeite:</strong> 10 g</div>
+        </div>
+      </section>
+
+      <section class="food-guide-card">
+        <h3>1x por semana</h3>
+        <div class="food-guide-list">
+          <div><strong>Pequeno-almoço:</strong> torrada + Compal de maçã no café</div>
+          <div><strong>Jantar:</strong> refeição livre</div>
+        </div>
+      </section>
     </section>
 
     <div class="footer-actions">
@@ -537,36 +594,7 @@
     }
 
 
-    function renderFoodReference(){
-      const target = document.getElementById("foodReference");
-      target.innerHTML = "";
-      foodDays.forEach((dayName, dayIndex) => {
-        const day = document.createElement("section");
-        day.className = "food-day";
-
-        const heading = document.createElement("h3");
-        heading.textContent = dayName;
-        day.appendChild(heading);
-
-        mealPlan[dayIndex].forEach((text, mealIndex) => {
-          const row = document.createElement("div");
-          row.className = "food-row";
-
-          const meal = document.createElement("div");
-          meal.className = "food-meal";
-          meal.textContent = mealNames[mealIndex];
-
-          const body = document.createElement("div");
-          body.className = "food-text";
-          body.textContent = text;
-
-          row.append(meal, body);
-          day.appendChild(row);
-        });
-
-        target.appendChild(day);
-      });
-    }
+    function renderFoodReference(){}
 
     function setPage(page){
       activePage = page;
