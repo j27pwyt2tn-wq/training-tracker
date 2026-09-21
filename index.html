@@ -283,6 +283,7 @@
   <script>
   (() => {
     const STORAGE_KEY = "joao-training-tracker-v2";
+    const POSITION_KEY = "joao-training-tracker-position-v1";
     const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
     const exercises = ["Indoor cycling","Outdoor cycling","Walking","Running","Strength training","Swimming","Football","Other"];
 
@@ -334,9 +335,14 @@
     ];
     let activePage = "training";
 
-    let currentYear = 2026;
-    let currentMonth = 8;
-    let currentWeek = 3;
+    let savedPosition = null;
+    try {
+      savedPosition = JSON.parse(localStorage.getItem(POSITION_KEY) || "null");
+    } catch(e) {}
+
+    let currentYear = Number.isInteger(savedPosition?.year) ? savedPosition.year : 2026;
+    let currentMonth = Number.isInteger(savedPosition?.month) && savedPosition.month >= 0 && savedPosition.month <= 11 ? savedPosition.month : 8;
+    let currentWeek = Number.isInteger(savedPosition?.week) && savedPosition.week >= 1 && savedPosition.week <= 5 ? savedPosition.week : 3;
 
     const monthName = document.getElementById("monthName");
     const weekTabs = document.getElementById("weekTabs");
@@ -382,6 +388,14 @@
     }
     function getWeek(){ return ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]; }
 
+    function savePosition(){
+      localStorage.setItem(POSITION_KEY, JSON.stringify({
+        year: currentYear,
+        month: currentMonth,
+        week: currentWeek
+      }));
+    }
+
     function saveData(msg="Saved"){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       statusEl.textContent = msg;
@@ -400,7 +414,7 @@
         b.type="button";
         b.className="week-tab"+(i===currentWeek?" active":"");
         b.textContent="W"+i;
-        b.addEventListener("click",()=>{ currentWeek=i; render(); });
+        b.addEventListener("click",()=>{ currentWeek=i; savePosition(); render(); });
         weekTabs.appendChild(b);
       }
     }
@@ -633,12 +647,14 @@
       currentMonth--;
       if(currentMonth<0){currentMonth=11;currentYear--;}
       currentWeek=1;
+      savePosition();
       render();
     });
     document.getElementById("nextMonth").addEventListener("click",()=>{
       currentMonth++;
       if(currentMonth>11){currentMonth=0;currentYear++;}
       currentWeek=1;
+      savePosition();
       render();
     });
 
@@ -694,6 +710,7 @@
       navigator.serviceWorker.register("./sw.js").catch(()=>{});
     }
 
+    savePosition();
     render();
   })();
   </script>
