@@ -40,12 +40,14 @@
       border:1px solid var(--line);background:var(--card);border-radius:10px;min-height:42px;color:var(--text);
     }
     .week-tabs{
-      display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0 12px;
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:6px;margin:10px 0 12px;
     }
     .week-tab{
       min-height:42px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-weight:600;
     }
     .week-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .week-tab span{display:block;font-weight:700}
+    .week-tab small{display:block;font-size:10px;opacity:.78;margin-top:1px;font-weight:600}
     .metrics{
       display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px
     }
@@ -341,9 +343,12 @@
       savedPosition = JSON.parse(localStorage.getItem(POSITION_KEY) || "null");
     } catch(e) {}
 
-    let currentYear = Number.isInteger(savedPosition?.year) ? savedPosition.year : 2026;
-    let currentMonth = Number.isInteger(savedPosition?.month) && savedPosition.month >= 0 && savedPosition.month <= 11 ? savedPosition.month : 8;
-    let currentWeek = Number.isInteger(savedPosition?.week) && savedPosition.week >= 1 && savedPosition.week <= 5 ? savedPosition.week : 3;
+    const today = new Date();
+    let currentYear = Number.isInteger(savedPosition?.year) ? savedPosition.year : today.getFullYear();
+    let currentMonth = Number.isInteger(savedPosition?.month) && savedPosition.month >= 0 && savedPosition.month <= 11
+      ? savedPosition.month
+      : today.getMonth();
+    let currentWeek = 1;
 
     const monthName = document.getElementById("monthName");
     const weekTabs = document.getElementById("weekTabs");
@@ -360,7 +365,7 @@
       return {days: Array.from({length:7}, blankDay), weight:"", waist:""};
     }
     function defaultData(){
-      return {months:{}};
+      return {months:{}, calendarWeeks:{}, calendarWeeksVersion:1};
     }
     function loadData(){
       try{
@@ -371,29 +376,160 @@
       }
     }
     let data = loadData();
+    if(!data.months || typeof data.months !== "object") data.months = {};
+    if(!data.calendarWeeks || typeof data.calendarWeeks !== "object") data.calendarWeeks = {};
 
-    function monthKey(y,m){ return `${y}-${String(m+1).padStart(2,"0")}`; }
-    function ensureMonth(y,m){
-      const key = monthKey(y,m);
-      if(!data.months[key]){
-        data.months[key] = {weeks:[blankWeek(),blankWeek(),blankWeek(),blankWeek(),blankWeek()]};
+    function pad2(n){ return String(n).padStart(2,"0"); }
+    function dateKey(d){
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    }
+    function parseDateKey(key){
+      const [y,m,d] = key.split("-").map(Number);
+      return new Date(y,m-1,d);
+    }
+    function startOfWeek(date){
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1-day;
+      d.setDate(d.getDate()+diff);
+      return d;
+    }
+    function addDays(date, amount){
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      d.setDate(d.getDate()+amount);
+      return d;
+    }
+    function monthWeeks(y,m){
+      const first = new Date(y,m,1);
+      const last = new Date(y,m+1,0);
+      let monday = startOfWeek(first);
+      const result = [];
+      while(monday <= last){
+        result.push(dateKey(monday));
+        monday = addDays(monday,7);
       }
-      while(data.months[key].weeks.length < 5) data.months[key].weeks.push(blankWeek());
-      data.months[key].weeks.forEach(w => {
-        while(w.days.length < 7) w.days.push(blankDay());
-        w.days.forEach(d => {
-          if(!Array.isArray(d.sessions)) d.sessions = [];
+      return result;
+    }
+    function monthKey(y,m){ return `${y}-${pad2(m+1)}`; }
+
+    function ensureWeekShape(w){
+      if(!w || typeof w !== "object") w = blankWeek();
+      if(!Array.isArray(w.days)) w.days = Array.from({length:7}, blankDay);
+      while(w.days.length < 7) w.days.push(blankDay());
+      w.days = w.days.slice(0,7);
+      w.days.forEach(d => {
+        if(!d || typeof d !== "object") d = blankDay();
+        if(!Array.isArray(d.sessions)) d.sessions = [];
+      });
+      if(typeof w.weight === "undefined") w.weight = "";
+      if(typeof w.waist === "undefined") w.waist = "";
+      return w;
+    }
+
+    function weekHasData(w){
+      if(!w) return false;
+      if(String(w.weight || "").trim() || String(w.waist || "").trim()) return true;
+      return Array.isArray(w.days) && w.days.some(d =>
+        Array.isArray(d.sessions) && d.sessions.some(s =>
+          String(s.exercise || "").trim() ||
+          String(s.time || "").trim() ||
+          String(s.km || "").trim() ||
+          String(s.calories || "").trim()
+        )
+      );
+    }
+
+    function mergeWeek(target, source){
+      target = ensureWeekShape(target);
+      source = ensureWeekShape(source);
+      source.days.forEach((sourceDay, i) => {
+        const targetDay = target.days[i];
+        const existing = new Set(targetDay.sessions.map(s => JSON.stringify(s)));
+        sourceDay.sessions.forEach(s => {
+          const sig = JSON.stringify(s);
+          if(!existing.has(sig)){
+            targetDay.sessions.push({...s});
+            existing.add(sig);
+          }
         });
       });
-      return data.months[key];
+      if(!String(target.weight || "").trim() && String(source.weight || "").trim()) target.weight = source.weight;
+      if(!String(target.waist || "").trim() && String(source.waist || "").trim()) target.waist = source.waist;
+      return target;
     }
-    function getWeek(){ return ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]; }
+
+    function migrateLegacyMonths(){
+      if(data.calendarWeeksVersion === 1 && Object.keys(data.calendarWeeks).length) return;
+
+      Object.entries(data.months).forEach(([key, month]) => {
+        const match = /^(\d{4})-(\d{2})$/.exec(key);
+        if(!match || !month || !Array.isArray(month.weeks)) return;
+        const y = Number(match[1]);
+        const m = Number(match[2])-1;
+        const weeks = monthWeeks(y,m);
+
+        month.weeks.forEach((legacyWeek, index) => {
+          if(index >= weeks.length || !weekHasData(legacyWeek)) return;
+          const wk = weeks[index];
+          if(!data.calendarWeeks[wk]) data.calendarWeeks[wk] = blankWeek();
+          data.calendarWeeks[wk] = mergeWeek(data.calendarWeeks[wk], legacyWeek);
+        });
+      });
+
+      data.calendarWeeksVersion = 1;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    migrateLegacyMonths();
+
+    function ensureCalendarWeek(weekKey){
+      if(!data.calendarWeeks[weekKey]) data.calendarWeeks[weekKey] = blankWeek();
+      data.calendarWeeks[weekKey] = ensureWeekShape(data.calendarWeeks[weekKey]);
+      return data.calendarWeeks[weekKey];
+    }
+
+    function currentMonthWeeks(){
+      return monthWeeks(currentYear,currentMonth);
+    }
+
+    function resolveInitialWeek(){
+      const weeks = currentMonthWeeks();
+
+      if(typeof savedPosition?.weekKey === "string" && weeks.includes(savedPosition.weekKey)){
+        currentWeek = weeks.indexOf(savedPosition.weekKey)+1;
+        return;
+      }
+
+      if(Number.isInteger(savedPosition?.week) && savedPosition.week >= 1 && savedPosition.week <= weeks.length){
+        currentWeek = savedPosition.week;
+        return;
+      }
+
+      const todayKey = dateKey(startOfWeek(today));
+      if(currentYear === today.getFullYear() && currentMonth === today.getMonth() && weeks.includes(todayKey)){
+        currentWeek = weeks.indexOf(todayKey)+1;
+      } else {
+        currentWeek = 1;
+      }
+    }
+    resolveInitialWeek();
+
+    function currentWeekKey(){
+      const weeks = currentMonthWeeks();
+      if(currentWeek < 1) currentWeek = 1;
+      if(currentWeek > weeks.length) currentWeek = weeks.length;
+      return weeks[currentWeek-1];
+    }
+
+    function getWeek(){
+      return ensureCalendarWeek(currentWeekKey());
+    }
 
     function savePosition(){
       localStorage.setItem(POSITION_KEY, JSON.stringify({
         year: currentYear,
         month: currentMonth,
-        week: currentWeek
+        week: currentWeek,
+        weekKey: currentWeekKey()
       }));
     }
 
@@ -408,16 +544,34 @@
       return new Intl.DateTimeFormat("en-GB",{month:"long",year:"numeric"}).format(new Date(currentYear,currentMonth,1));
     }
 
+    function weekRangeLabel(weekKey){
+      const start = parseDateKey(weekKey);
+      const end = addDays(start,6);
+      const sameMonth = start.getMonth() === end.getMonth();
+      if(sameMonth) return `${start.getDate()}–${end.getDate()}`;
+      return `${start.getDate()} ${new Intl.DateTimeFormat("en-GB",{month:"short"}).format(start)}–${end.getDate()} ${new Intl.DateTimeFormat("en-GB",{month:"short"}).format(end)}`;
+    }
+
     function renderTabs(){
       weekTabs.innerHTML="";
-      for(let i=1;i<=5;i++){
+      const weeks = currentMonthWeeks();
+      if(currentWeek > weeks.length) currentWeek = weeks.length;
+
+      weeks.forEach((weekKey,index)=>{
+        const i = index+1;
         const b=document.createElement("button");
         b.type="button";
         b.className="week-tab"+(i===currentWeek?" active":"");
-        b.textContent="W"+i;
+
+        const w=document.createElement("span");
+        w.textContent="W"+i;
+        const range=document.createElement("small");
+        range.textContent=weekRangeLabel(weekKey);
+        b.append(w,range);
+
         b.addEventListener("click",()=>{ currentWeek=i; savePosition(); render(); });
         weekTabs.appendChild(b);
-      }
+      });
     }
 
     function numberVal(v){
@@ -591,11 +745,18 @@
     }
 
     function updateMonthSummary(){
-      const month=ensureMonth(currentYear,currentMonth);
+      const weeks = currentMonthWeeks();
       let sessions=0,time=0,km=0,cal=0;
       const weights=[];
-      month.weeks.forEach(w=>{
-        w.days.forEach(day=>{
+
+      weeks.forEach(weekKey=>{
+        const w=ensureCalendarWeek(weekKey);
+        const weekStart=parseDateKey(weekKey);
+
+        w.days.forEach((day,dayIndex)=>{
+          const actualDate=addDays(weekStart,dayIndex);
+          if(actualDate.getFullYear()!==currentYear || actualDate.getMonth()!==currentMonth) return;
+
           day.sessions.forEach(s=>{
             const hasSomething = (s.exercise && s.exercise.trim()) || s.time || s.km || s.calories;
             if(hasSomething) sessions++;
@@ -604,14 +765,20 @@
             cal+=numberVal(s.calories);
           });
         });
+
+        const friday=addDays(weekStart,4);
         const wt=Number(w.weight);
-        if(Number.isFinite(wt)&&wt>0) weights.push(wt);
+        if(friday.getFullYear()===currentYear && friday.getMonth()===currentMonth && Number.isFinite(wt) && wt>0){
+          weights.push({date:friday,value:wt});
+        }
       });
+
+      weights.sort((a,b)=>a.date-b.date);
       document.getElementById("monthSessions").textContent=sessions;
       document.getElementById("monthMinutes").textContent=Math.round(time);
       document.getElementById("monthKm").textContent=km.toFixed(1);
       document.getElementById("monthCalories").textContent=Math.round(cal);
-      const delta=weights.length>=2 ? weights[weights.length-1]-weights[0] : null;
+      const delta=weights.length>=2 ? weights[weights.length-1].value-weights[0].value : null;
       document.getElementById("monthWeightDelta").textContent = delta===null ? "—" : `${delta>0?"+":""}${delta.toFixed(1)} kg`;
     }
 
@@ -629,7 +796,6 @@
     }
 
     function render(){
-      ensureMonth(currentYear,currentMonth);
       monthName.textContent=fmtMonth();
       renderTabs();
       renderDays();
@@ -645,16 +811,20 @@
     document.getElementById("foodTab").addEventListener("click",()=>setPage("food"));
 
     document.getElementById("prevMonth").addEventListener("click",()=>{
+      const oldKey=currentWeekKey();
       currentMonth--;
       if(currentMonth<0){currentMonth=11;currentYear--;}
-      currentWeek=1;
+      const weeks=currentMonthWeeks();
+      currentWeek=weeks.includes(oldKey) ? weeks.indexOf(oldKey)+1 : weeks.length;
       savePosition();
       render();
     });
     document.getElementById("nextMonth").addEventListener("click",()=>{
+      const oldKey=currentWeekKey();
       currentMonth++;
       if(currentMonth>11){currentMonth=0;currentYear++;}
-      currentWeek=1;
+      const weeks=currentMonthWeeks();
+      currentWeek=weeks.includes(oldKey) ? weeks.indexOf(oldKey)+1 : 1;
       savePosition();
       render();
     });
@@ -671,7 +841,7 @@
 
     document.getElementById("clearWeek").addEventListener("click",()=>{
       if(!confirm("Clear all training data for this week?")) return;
-      ensureMonth(currentYear,currentMonth).weeks[currentWeek-1]=blankWeek();
+      data.calendarWeeks[currentWeekKey()]=blankWeek();
       saveData("Week cleared");
       render();
     });
@@ -695,8 +865,14 @@
       reader.onload=()=>{
         try{
           const parsed=JSON.parse(reader.result);
-          if(!parsed || typeof parsed!=="object" || !parsed.months) throw new Error();
+          if(!parsed || typeof parsed!=="object" || (!parsed.months && !parsed.calendarWeeks)) throw new Error();
           data=parsed;
+          if(!data.months || typeof data.months!=="object") data.months={};
+          if(!data.calendarWeeks || typeof data.calendarWeeks!=="object") data.calendarWeeks={};
+          if(data.calendarWeeksVersion !== 1 || !Object.keys(data.calendarWeeks).length){
+            data.calendarWeeksVersion=0;
+            migrateLegacyMonths();
+          }
           saveData("Backup imported");
           render();
         }catch(err){
